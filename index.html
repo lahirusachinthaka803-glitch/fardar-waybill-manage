@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fardar 4-Account Waybill Manager</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e4e9f0;--primary:#2563eb;--success:#16a34a;--danger:#dc2626;--warning:#d97706;--purple:#7c3aed;--shadow:0 8px 28px rgba(20,35,60,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Arial,sans-serif}
+header{background:#111827;color:#fff;padding:18px 22px;position:sticky;top:0;z-index:10;box-shadow:0 3px 14px #0002}
+.header{max-width:1400px;margin:auto;display:flex;gap:18px;align-items:center;justify-content:space-between}.brand{font-size:21px;font-weight:800}.brand small{display:block;font-size:11px;font-weight:400;color:#cbd5e1}
+nav{max-width:1400px;margin:14px auto 0;display:flex;gap:8px;overflow:auto}nav button{background:#1f2937;border:1px solid #374151;color:#fff;padding:9px 14px;border-radius:8px;cursor:pointer}nav button.active{background:#2563eb;border-color:#2563eb}
+main{max-width:1400px;margin:22px auto;padding:0 16px}.page{display:none}.page.active{display:block}.grid{display:grid;gap:14px}.stats{grid-template-columns:repeat(6,minmax(130px,1fr))}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}.stat .label{color:var(--muted);font-size:12px}.stat .value{font-size:25px;font-weight:800;margin-top:5px}.stat.wait .value{color:var(--warning)}.stat.disp .value{color:var(--primary)}.stat.del .value{color:var(--success)}.stat.ret .value{color:var(--danger)}.stat.rec .value{color:var(--purple)}
+h2,h3{margin:0 0 14px}h2{font-size:22px}h3{font-size:16px}.muted{color:var(--muted)}
+label{display:block;font-weight:700;font-size:12px;margin:0 0 5px}input,select,textarea{width:100%;padding:10px 11px;border:1px solid #cfd7e3;border-radius:8px;background:#fff;color:var(--text);outline:none}input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px #2563eb18}
+.row{display:grid;grid-template-columns:repeat(12,1fr);gap:10px}.c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}button,.btn{border:0;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;background:#e8edf5;color:#172033}button.primary{background:var(--primary);color:#fff}button.success{background:var(--success);color:#fff}button.danger{background:var(--danger);color:#fff}button.purple{background:var(--purple);color:#fff}button:disabled{opacity:.5;cursor:not-allowed}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:950px;background:#fff}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{background:#f8fafc;font-size:12px;color:#536174}tr:last-child td{border-bottom:0}
+.badge{display:inline-block;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800}.WAITING{background:#fff7ed;color:#b45309}.DISPATCHED{background:#eff6ff;color:#1d4ed8}.DELIVERED{background:#f0fdf4;color:#15803d}.RETURNED{background:#fef2f2;color:#b91c1c}.RECEIVED{background:#f5f3ff;color:#6d28d9}
+.account-card{position:relative}.account-card h3{margin-right:55px}.account-num{position:absolute;right:14px;top:14px;background:#e8eefc;color:#1d4ed8;border-radius:20px;padding:5px 9px;font-weight:800}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.toolbar>div{min-width:150px}.toolbar .wide{min-width:260px;flex:1}.scan-box{border:2px dashed #93c5fd;background:#eff6ff;text-align:center;padding:18px;border-radius:12px}.scan-box input{font-size:20px;text-align:center}.notice{padding:10px 12px;border-radius:9px;background:#fff7ed;color:#92400e;margin-bottom:12px}.ok{background:#f0fdf4;color:#166534}.error{background:#fef2f2;color:#991b1b}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:50;align-items:center;justify-content:center;padding:15px}.modal.open{display:flex}.modal .box{background:#fff;max-width:620px;width:100%;max-height:90vh;overflow:auto;border-radius:14px;padding:18px}
+small.code{font-family:monospace;background:#f1f5f9;padding:2px 5px;border-radius:4px}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr)}.four{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.c8,.c6,.c4,.c3{grid-column:span 12}}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}main{padding:0 10px}.header{align-items:flex-start}.brand{font-size:17px}}
+
+@media(max-width:700px){
+  .table-wrap{overflow-x:auto}
+  #wbTableWrap table{min-width:0;width:100%;table-layout:fixed}
+  #wbTableWrap th,#wbTableWrap td{white-space:normal;overflow:hidden;text-overflow:ellipsis}
+  #wbTableWrap th:nth-child(1),#wbTableWrap td:nth-child(1),
+  #wbTableWrap th:nth-child(4),#wbTableWrap td:nth-child(4),
+  #wbTableWrap th:nth-child(6),#wbTableWrap td:nth-child(6),
+  #wbTableWrap th:nth-child(7),#wbTableWrap td:nth-child(7){display:none}
+  #wbTableWrap th:nth-child(2),#wbTableWrap td:nth-child(2){width:27%}
+  #wbTableWrap th:nth-child(3),#wbTableWrap td:nth-child(3){width:18%}
+  #wbTableWrap th:nth-child(5),#wbTableWrap td:nth-child(5){width:25%}
+  #wbTableWrap th:nth-child(8),#wbTableWrap td:nth-child(8){width:30%}
+  #wbTableWrap td button{padding:7px 8px;margin:2px;font-size:12px}
+  #accountSummary{min-width:760px}
+}
+</style>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+window.addEventListener('error', function(e){
+  if(e && e.target && e.target.tagName==='SCRIPT' && !window.XLSX){
+    const fallback=document.createElement('script');
+    fallback.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.20.3/xlsx.full.min.js';
+    document.head.appendChild(fallback);
+  }
+}, true);
+</script>
+</head>
+<body>
+<header>
+  <div class="header">
+    <div class="brand">Fardar Waybill Manager<small>4 Accounts • Excel Amount Import • Barcode / Manual</small></div>
+    <div id="saveState">Local data</div>
+  </div>
+  <nav>
+    <button class="nav active" data-page="dashboard">Dashboard</button>
+    <button class="nav" data-page="waybills">Waybills</button>
+    <button class="nav" data-page="scan">Return Scan</button>
+    <button class="nav" data-page="accounts">Accounts</button>
+    <button class="nav" data-page="tools">Backup</button>
+  </nav>
+</header>
+
+<main>
+<section id="dashboard" class="page active">
+  <div class="toolbar" style="margin-bottom:14px">
+    <div class="wide"><label>Dashboard account</label><select id="dashAccount"></select></div>
+    <div><label>Status filter</label><select id="dashStatus"><option value="ALL">All statuses</option><option>WAITING</option><option>DISPATCHED</option><option>DELIVERED</option><option>RETURNED</option><option>RECEIVED</option></select></div>
+  </div>
+  <div class="grid stats" id="stats"></div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>Account Summary</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Waybills</th><th>Waiting</th><th>Dispatched</th><th>Delivered</th><th>Returned</th><th>Received</th><th>Total Amount</th></tr></thead><tbody id="accountSummary"></tbody></table></div></div>
+    <div class="card"><h3>Amount Summary</h3><div id="amountSummary" class="muted"></div></div>
+  </div>
+</section>
+
+<section id="waybills" class="page">
+  <div class="card">
+    <h2>Waybills</h2>
+    <div class="row">
+      <div class="c3"><label>Account</label><select id="wbAccount"></select></div>
+      <div class="c3"><label>Waybill / Barcode</label><input id="wbNo" placeholder="e.g. 17185909"></div>
+      <div class="c3"><label>Initial status</label><select id="wbStatus"><option>WAITING</option><option>DISPATCHED</option><option>DELIVERED</option><option>RETURNED</option></select></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="c4"><label>Recipient</label><input id="wbRecipient"></div>
+      <div class="c4"><label>City</label><input id="wbCity"></div>
+      <div class="c4"><label>Order ID (optional)</label><input id="wbOrder"></div>
+    </div>
+    <div class="actions"><button class="primary" id="addWb">Add Waybill Manually</button><button id="syncAll">Sync All Visible</button></div>
+    <div class="notice" style="margin-top:12px">
+      <b>Excel Upload:</b> Select an account and upload that account's Fardar/API Excel file.
+      The system reads Waybill + COD Amount + recipient/mobile/address/city + parcel details automatically. CSV works directly; Excel files work when the Excel reader is available.
+      Existing Account + Waybill records are updated instead of duplicated.
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="c4"><label>Excel Account</label><select id="excelAccount"></select></div>
+      <div class="c8"><label>Fardar/API file (.csv, .xlsx, .xls)</label><input id="excelFile" type="file" accept=".xlsx,.xls,.csv"></div>
+    </div>
+    <div class="actions"><button class="success" id="uploadExcel">Upload Excel & Import</button></div>
+    <div id="excelMessage" style="margin-top:10px"></div>
+    <div id="apiMessage" style="margin-top:10px"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h3>Quick Barcode / Manual Waybill Entry</h3>
+    <p class="muted">Scan with a USB/Bluetooth scanner or type the waybill manually. No price is entered here; amount comes from Excel.</p>
+    <div class="row">
+      <div class="c4"><label>Account</label><select id="quickAccount"></select></div>
+      <div class="c4"><label>Waybill / Barcode</label><input id="quickWaybill" autocomplete="off" placeholder="Scan or type waybill"></div>
+      <div class="c4"><label>Status</label><select id="quickStatus"><option>WAITING</option><option>DISPATCHED</option><option>DELIVERED</option><option>RETURNED</option></select></div>
+    </div>
+    <div class="actions"><button class="primary" id="quickAdd">Add / Update Waybill</button><button class="success" id="quickReturn">⚡ RETURN RECEIVED</button><button id="quickClear">Clear</button></div>
+    <div id="quickMessage" style="margin-top:10px"></div>
+    <div class="notice" style="margin-top:8px"><b>⚡ Auto Scan:</b> Just scan the barcode. No Enter key is required. If the parcel is RETURNED, it automatically becomes RECEIVED.</div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="toolbar">
+      <div class="wide"><label>Search</label><input id="wbSearch" placeholder="Waybill, recipient, order..."></div>
+      <div><label>Account</label><select id="filterAccount"></select></div>
+      <div><label>Status</label><select id="filterStatus"><option value="ALL">All</option><option>WAITING</option><option>DISPATCHED</option><option>DELIVERED</option><option>RETURNED</option><option>RECEIVED</option></select></div>
+      <button id="refreshTable">Refresh</button>
+    </div>
+    <div class="table-wrap" id="wbTableWrap" style="margin-top:12px"><table><thead><tr><th>Account</th><th>Waybill</th><th>Amount</th><th>Fardar/API Status</th><th>Our Status</th><th>Last Update</th><th>Recipient</th><th>Actions</th></tr></thead><tbody id="wbTable"></tbody></table></div>
+  </div>
+</section>
+
+<section id="scan" class="page">
+  <div class="card">
+    <h2>Returned Parcel → RECEIVED</h2>
+    <div class="notice">Only a waybill already marked <b>RETURNED</b> can be changed to <b>RECEIVED</b> by scanning. This prevents accidental changes to normal parcels.</div>
+    <div class="scan-box">
+      <div style="font-size:30px">▣</div>
+      <h3>Scan barcode</h3>
+      <p class="muted">Use a USB/Bluetooth barcode scanner, or type the waybill and press Enter.</p>
+      <input id="scanInput" autocomplete="off" autofocus placeholder="Scan / type waybill">
+      <div class="actions" style="justify-content:center"><button class="purple" id="scanReceive">Mark RECEIVED</button><button id="clearScan">Clear</button></div>
+      <div id="scanResult" style="margin-top:12px"></div>
+    </div>
+    <div class="card" style="margin-top:14px;box-shadow:none"><h3>Returned Parcels Waiting for Receipt</h3><div class="table-wrap"><table><thead><tr><th>Account</th><th>Waybill</th><th>Amount</th><th>Returned At</th><th>Action</th></tr></thead><tbody id="returnedTable"></tbody></table></div></div>
+  </div>
+</section>
+
+<section id="accounts" class="page">
+  <div class="card">
+    <h2>Fardar Accounts</h2>
+    <div class="notice">API keys are stored only in this browser's localStorage. Do not publish this HTML with real keys inside a public website. For production use, put the API call behind your own server.</div>
+    <div class="grid four" id="accountCards"></div>
+    <div class="actions"><button class="primary" id="saveAccounts">Save Accounts</button><button id="testSelected">Test Selected Account</button></div>
+    <div id="accountMessage" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<section id="tools" class="page">
+  <div class="grid two">
+    <div class="card"><h2>Backup</h2><p class="muted">Export all four account settings and waybills as JSON.</p><div class="actions"><button class="primary" id="exportBtn">Export JSON</button><button id="importBtn">Import JSON</button><input id="importFile" type="file" accept="application/json" hidden></div></div>
+    <div class="card"><h2>Data</h2><p class="muted">All records are local to this browser.</p><button class="danger" id="clearData">Delete All Waybill Data</button></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>API Notes</h3>
+    <ul class="muted">
+      <li>Existing Waybill endpoint from your Fardar documentation is used for the POST sync.</li>
+      <li>Fardar Existing Waybill API codes <small class="code">200–214</small> are treated as API/result codes, not parcel-delivery statuses. <small class="code">200</small> means the parcel was successfully inserted; <small class="code">201–214</small> are validation/API error or status messages. The parcel delivery status changes only when Fardar returns <small class="code">current_status</small>.</li>
+      <li>If a response contains <small class="code">current_status</small>, that value is mapped to our WAITING/DISPATCHED/DELIVERED/RETURNED categories.</li>
+      <li>The Fardar Reverse API documentation you provided returns <small class="code">waybill_id</small>, <small class="code">current_status</small> and <small class="code">last_update_time</small>. This page reads those callbacks from <small class="code">./reverse_api.php</small> every 30 seconds.</li>
+      <li><small class="code">amount</small> is no longer entered manually. It is imported from the account's Excel file and included in account/all-account summaries.</li>
+      <li>Each account has its own Excel upload. Matching <small class="code">Account + Waybill</small> updates the existing parcel rather than creating a duplicate.</li>
+    </ul>
+  </div>
+</section>
+</main>
+
+<script>
+const API_URL='https://www.fdedomestic.com/api/parcel/existing_waybill_api_v1.php';
+const REVERSE_STATUS_URL='./reverse_api.php';
+const KEY='fardar4_waybill_manager_v1';
+const DEFAULT={
+  accounts:[
+    {name:'Account 1',clientId:'',apiKey:''},
+    {name:'Account 2',clientId:'',apiKey:''},
+    {name:'Account 3',clientId:'',apiKey:''},
+    {name:'Account 4',clientId:'',apiKey:''}
+  ],
+  waybills:[]
+};
+let db=load();
+
+function load(){
+  try{return {...DEFAULT,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){return structuredClone(DEFAULT)}
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(db));document.getElementById('saveState').textContent='Saved '+new Date().toLocaleTimeString()}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function money(n){return new Intl.NumberFormat('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0)}
+function now(){return new Date().toISOString()}
+function accountName(i){return db.accounts[i]?.name||`Account ${Number(i)+1}`}
+function apiCodeMeaning(code){
+  const c=String(code??'').trim();
+  const meanings={
+    '200':'Successfully insert the parcel',
+    '201':'Incorrect waybill type. Only allow CRE or CCP',
+    '202':'The waybill is used',
+    '203':'The waybill is not yet assigned',
+    '204':'Inactive Client',
+    '205':'Invalid order id',
+    '206':'Invalid weight',
+    '207':'Empty or invalid parcel description',
+    '208':'Empty or invalid name',
+    '209':'Invalid contact number 1',
+    '210':'Invalid contact number 2',
+    '211':'Empty or invalid address',
+    '212':'Empty or invalid amount',
+    '213':'Invalid city',
+    '214':'Parcel insert unsuccessfully'
+  };
+  return meanings[c] || (c ? 'API RESPONSE' : '');
+}
+async function syncReverseStatuses(){
+  try{
+    const res=await fetch(REVERSE_STATUS_URL+'?t='+Date.now(),{cache:'no-store'});
+    if(!res.ok) return;
+    const data=await res.json();
+    const map=(data && typeof data==='object' && data.statuses) ? data.statuses : data;
+    if(!map || typeof map!=='object') return;
+    let changed=false;
+    db.waybills.forEach(r=>{
+      const key=String(r.waybill).trim();
+      const item=map[key];
+      if(!item) return;
+      const raw=item.current_status??item.delivery_status??item.status??null;
+      const mapped=statusMap(raw);
+      if(raw!=null && r.currentStatus!==String(raw)){r.currentStatus=String(raw);changed=true}
+      if(mapped && mapped!=='RECEIVED' && r.ourStatus!==mapped){
+        r.ourStatus=mapped; changed=true;
+      }
+      if(item.last_update_time){
+        r.lastUpdate=item.last_update_time;
+        changed=true;
+      }
+      if(item.updated_at) r.reverseUpdatedAt=item.updated_at;
+    });
+    if(changed){save();renderAll();}
+  }catch(e){
+    // Reverse callback file may not be installed yet; do not interrupt the UI.
+  }
+}
+
+function statusMap(raw){
+  if(raw==null)return null;
+  const s=String(raw).trim().toUpperCase();
+  if(/RETURN|RTO|RTS/.test(s))return 'RETURNED';
+  if(/DELIVER|COMPLETE|SUCCESS/.test(s))return 'DELIVERED';
+  if(/TRANSFER|DISPATCH|TRANSIT|PICK.?UP|OUT.?FOR.?DELIVERY|SHIP|DEPART|ON.?THE.?WAY/.test(s))return 'DISPATCHED';
+  if(/WAIT|PENDING|BOOK|NEW|CREATE|PROCESS|RECEIV|ACTIVE|ACCEPT/.test(s))return 'WAITING';
+  if(['WAITING','DISPATCHED','DELIVERED','RETURNED','RECEIVED'].includes(s))return s;
+  return null;
+}
+function allStatus(r){return r.ourStatus||statusMap(r.currentStatus)||'WAITING'}
+function opts(includeAll=true){let a=includeAll?'<option value="ALL">All Accounts</option>':'';return a+db.accounts.map((x,i)=>`<option value="${i}">${esc(x.name||'Account '+(i+1))}</option>`).join('')}
+function fillSelects(){
+  const opts='<option value="ALL">All Accounts</option>'+db.accounts.map((a,i)=>`<option value="${i}">${esc(a.name)}</option>`).join('');
+  document.getElementById('dashAccount').innerHTML=opts;
+  document.getElementById('filterAccount').innerHTML=opts;
+  const acc='<option value="0">'+esc(db.accounts[0].name)+'</option>'+db.accounts.slice(1).map((a,i)=>`<option value="${i+1}">${esc(a.name)}</option>`).join('');
+  ['wbAccount','excelAccount','quickAccount'].forEach(id=>document.getElementById(id).innerHTML=acc);
+}
+function renderAccounts(){
+  document.getElementById('accountCards').innerHTML=db.accounts.map((a,i)=>`
+  <div class="card account-card"><span class="account-num">#${i+1}</span><h3>${esc(a.name||'Account '+(i+1))}</h3>
+  <label>Account Name</label><input class="acc-name" data-i="${i}" value="${esc(a.name||'')}">
+  <label style="margin-top:9px">Client ID</label><input class="acc-client" data-i="${i}" value="${esc(a.clientId||'')}">
+  <label style="margin-top:9px">API Key</label><input class="acc-key" data-i="${i}" type="password" value="${esc(a.apiKey||'')}">
+  </div>`).join('');
+}
+function getFiltered(){
+  const q=document.getElementById('wbSearch').value.trim().toLowerCase();
+  const ai=document.getElementById('filterAccount').value;
+  const st=document.getElementById('filterStatus').value;
+  return db.waybills.filter(r=>
+    (ai==='ALL'||String(r.account)===ai)&&
+    (!q||[r.waybill,r.recipient,r.city,r.orderId].join(' ').toLowerCase().includes(q))&&
+    (st==='ALL'||allStatus(r)===st)
+  );
+}
+function renderTable(){
+  const rows=getFiltered();
+  document.getElementById('wbTable').innerHTML=rows.length?rows.map(r=>{
+    const s=allStatus(r);
+    const canReceive=s==='RETURNED';
+    return `<tr>
+      <td>${esc(accountName(r.account))}</td><td><b>${esc(r.waybill)}</b></td><td>${money(r.amount)}</td>
+      <td>${esc(r.apiStatus??'—')}</td><td><span class="badge ${s}">${s}</span></td>
+      <td>${esc(r.lastUpdate?new Date(r.lastUpdate).toLocaleString():'—')}</td><td>${esc(r.recipient||'—')}</td>
+      <td><button onclick="syncOne('${esc(r.id)}')">Sync</button> ${canReceive?`<button class="purple" onclick="receiveById('${esc(r.id)}')">RECEIVED</button>`:''} <button class="danger" onclick="deleteWb('${esc(r.id)}')">Delete</button></td>
+    </tr>`}).join(''):'<tr><td colspan="8" class="muted">No waybills found.</td></tr>';
+}
+function statsFor(list){
+  const c={WAITING:0,DISPATCHED:0,DELIVERED:0,RETURNED:0,RECEIVED:0};
+  let amount=0;list.forEach(r=>{c[allStatus(r)]++;amount+=Number(r.amount)||0});return {...c,total:list.length,amount};
+}
+function renderDashboard(){
+  const ai=document.getElementById('dashAccount').value||'ALL';
+  const st=document.getElementById('dashStatus').value||'ALL';
+  let list=db.waybills.filter(r=>ai==='ALL'||String(r.account)===ai);
+  if(st!=='ALL')list=list.filter(r=>allStatus(r)===st);
+  const x=statsFor(list);
+  document.getElementById('stats').innerHTML=[
+    ['Total Waybills',x.total,''],['WAITING',x.WAITING,'wait'],['DISPATCHED',x.DISPATCHED,'disp'],['DELIVERED',x.DELIVERED,'del'],['RETURNED',x.RETURNED,'ret'],['RECEIVED',x.RECEIVED,'rec']
+  ].map(a=>`<div class="card stat ${a[2]}"><div class="label">${a[0]}</div><div class="value">${a[1]}</div></div>`).join('');
+  document.getElementById('accountSummary').innerHTML=db.accounts.map((a,i)=>{
+    const q=statsFor(db.waybills.filter(r=>Number(r.account)===i));
+    return `<tr><td><b>${esc(a.name)}</b></td><td>${q.total}</td><td>${q.WAITING}</td><td>${q.DISPATCHED}</td><td>${q.DELIVERED}</td><td>${q.RETURNED}</td><td>${q.RECEIVED}</td><td>${money(q.amount)}</td></tr>`
+  }).join('');
+  const total=statsFor(db.waybills);
+  document.getElementById('amountSummary').innerHTML=`<div class="grid two">
+    <div class="card"><span class="muted">All Accounts Total</span><h2>${money(total.amount)}</h2></div>
+    <div class="card"><span class="muted">Selected View</span><h2>${money(x.amount)}</h2></div>
+    <div class="card"><span class="muted">Delivered Amount</span><h3>${money(list.filter(r=>allStatus(r)==='DELIVERED').reduce((s,r)=>s+(Number(r.amount)||0),0))}</h3></div>
+    <div class="card"><span class="muted">Returned / Received Amount</span><h3>${money(list.filter(r=>['RETURNED','RECEIVED'].includes(allStatus(r))).reduce((s,r)=>s+(Number(r.amount)||0),0))}</h3></div>
+  </div>`;
+}
+function renderReturned(){
+  const rows=db.waybills.filter(r=>allStatus(r)==='RETURNED');
+  document.getElementById('returnedTable').innerHTML=rows.length?rows.map(r=>`<tr><td>${esc(accountName(r.account))}</td><td><b>${esc(r.waybill)}</b></td><td>${money(r.amount)}</td><td>${esc(r.lastUpdate?new Date(r.lastUpdate).toLocaleString():'—')}</td><td><button class="purple" onclick="receiveById('${esc(r.id)}')">RECEIVED</button></td></tr>`).join(''):'<tr><td colspan="5" class="muted">No returned parcels waiting to be received.</td></tr>';
+}
+function renderAll(){fillSelects();renderAccounts();renderTable();renderReturned();renderDashboard();}
+
+async function syncRecord(r){
+  const a=db.accounts[r.account];
+  if(!a?.clientId||!a?.apiKey)throw new Error('Account Client ID/API Key not configured.');
+  const body=new URLSearchParams();
+  body.set('client_id',a.clientId);
+  body.set('api_key',a.apiKey);
+  body.set('waybill_id',r.waybill);
+  body.set('parcel_weight',r.weight||'1');
+  body.set('parcel_description',r.description||'Parcel');
+  body.set('recipient_name',r.recipient||'');
+  body.set('recipient_contact_1',r.contact||'');
+  body.set('recipient_address',r.address||'');
+  body.set('recipient_city',r.city||'');
+  body.set('amount',String(r.amount??0));
+  body.set('exchange',r.exchange??'0');
+  if(r.orderId)body.set('order_id',r.orderId);
+  if(r.contact2)body.set('recipient_contact_2',r.contact2);
+  const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  const text=await res.text();
+  let data;try{data=JSON.parse(text)}catch{throw new Error('Fardar returned non-JSON: '+text.slice(0,200))}
+  r.apiStatus=data.status??data.code??null;
+  r.apiResult=apiCodeMeaning(r.apiStatus);
+  r.apiWaybillId=data.waybillID??data.waybill_id??r.waybill;
+  const current=data.current_status??data.delivery_status??data.deliveryStatus??null;
+  if(current){const mapped=statusMap(current);if(mapped)r.ourStatus=mapped;r.currentStatus=current}
+  if(data.last_update_time)r.lastUpdate=data.last_update_time;
+  if(data.amount!=null)r.amount=Number(data.amount)||0;
+  r.syncedAt=now();save();renderAll();return data;
+}
+async function syncOne(id){
+  const r=db.waybills.find(x=>x.id===id);if(!r)return;
+  showMsg('apiMessage','Syncing '+r.waybill+'...','');
+  try{const d=await syncRecord(r);const code=String(d.status??d.code??'').trim();
+    const meaning=apiCodeMeaning(code) || 'response received';
+    const type=code==='200'?'ok':(code?'error':'');
+    showMsg('apiMessage',`Fardar response ${code||'—'}: ${meaning}. Delivery status changes only when current_status is returned.`,type)}catch(e){showMsg('apiMessage',e.message,'error')}
+}
+async function syncAll(){
+  const rows=getFiltered();if(!rows.length)return showMsg('apiMessage','No visible waybills.','');
+  showMsg('apiMessage','Syncing '+rows.length+' waybill(s)...','');
+  let ok=0,fail=0;
+  for(const r of rows){try{await syncRecord(r);ok++}catch(e){fail++}}
+  showMsg('apiMessage',`Finished. Success: ${ok}, Failed: ${fail}.`,'ok');
+}
+function showMsg(id,text,type){const e=document.getElementById(id);e.className='notice '+(type||'');e.textContent=text}
+function addWaybill(){
+  const waybill=document.getElementById('wbNo').value.trim();
+  if(!waybill)return alert('Enter a waybill.');
+  const account=Number(document.getElementById('wbAccount').value);
+  const existing=db.waybills.find(r=>String(r.waybill).trim()===waybill&&Number(r.account)===account);
+  if(existing){
+    existing.ourStatus=document.getElementById('wbStatus').value;
+    existing.recipient=document.getElementById('wbRecipient').value.trim();
+    existing.city=document.getElementById('wbCity').value.trim();
+    existing.orderId=document.getElementById('wbOrder').value.trim();
+    existing.lastUpdate=now();
+    save();renderAll();showMsg('apiMessage',`Waybill ${waybill} updated. Amount remains from Excel.`,'ok');return;
+  }
+  db.waybills.push({
+    id:crypto.randomUUID(),account,waybill,amount:0,
+    ourStatus:document.getElementById('wbStatus').value,
+    recipient:document.getElementById('wbRecipient').value.trim(),
+    city:document.getElementById('wbCity').value.trim(),
+    orderId:document.getElementById('wbOrder').value.trim(),
+    description:'Parcel',weight:'1',exchange:'0',
+    lastUpdate:now(),apiStatus:null,currentStatus:null
+  });
+  save();
+  ['wbNo','wbRecipient','wbCity','wbOrder'].forEach(id=>document.getElementById(id).value='');
+  renderAll();
+  showMsg('apiMessage',`Waybill ${waybill} added. Upload the account Excel to attach its amount.`,'ok');
+}
+
+function normalKey(v){
+  return String(v??'').trim().toLowerCase().replace(/[\s_\-./()]+/g,'');
+}
+function findColumn(headers, candidates){
+  const normalized=headers.map(normalKey);
+  for(const c of candidates){
+    const i=normalized.indexOf(normalKey(c));
+    if(i>=0)return i;
+  }
+  // partial match for common Fardar/ERP column names
+  for(let i=0;i<normalized.length;i++){
+    if(candidates.some(c=>normalized[i].includes(normalKey(c)))) return i;
+  }
+  return -1;
+}
+function parseNumber(v){
+  if(v==null||v==='')return 0;
+  const n=Number(String(v).replace(/,/g,'').replace(/[^\d.-]/g,''));
+  return Number.isFinite(n)?n:0;
+}
+function parseStatus(v){
+  const s=String(v??'').trim();
+  const mapped=statusMap(s);
+  return mapped || (['WAITING','DISPATCHED','DELIVERED','RETURNED','RECEIVED'].includes(s.toUpperCase())?s.toUpperCase():null);
+}
+function parseCSV(text){
+  const rows=[]; let row=[], cell='', quoted=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i], next=text[i+1];
+    if(quoted){
+      if(ch==='"' && next==='"'){cell+='"';i++}
+      else if(ch==='"') quoted=false;
+      else cell+=ch;
+    }else{
+      if(ch==='"' && cell==='') quoted=true;
+      else if(ch===','){row.push(cell);cell=''}
+      else if(ch==='\n'){row.push(cell);rows.push(row);row=[];cell=''}
+      else if(ch!=='\r') cell+=ch;
+    }
+  }
+  if(cell!=='' || row.length){row.push(cell);rows.push(row)}
+  return rows;
+}
+async function readUploadRows(file){
+  const name=file.name.toLowerCase();
+  if(name.endsWith('.csv') || file.type==='text/csv'){
+    return parseCSV(await file.text());
+  }
+  if(window.XLSX){
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    if(!wb.SheetNames.length) throw new Error('Excel file has no sheets.');
+    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+  }
+  throw new Error('CSV works without any extra library. For .xlsx/.xls, open the page with internet enabled so the Excel reader can load.');
+}
+async function importExcelFile(file, account){
+  const rows=await readUploadRows(file);
+  if(rows.length<2) throw new Error('The file has no data rows.');
+  const headers=rows[0].map(v=>String(v??''));
+  const waybillCol=findColumn(headers,['waybill','waybill id','waybill_id','waybill no','tracking','tracking no','tracking number','awb']);
+  const amountCol=findColumn(headers,['amount','price','cod','cod amount','parcel amount','collect amount','value']);
+  const recipientCol=findColumn(headers,['recipient','recipient name','customer','customer name','consignee','name']);
+  const mobileCol=findColumn(headers,['recipient mobile','recipient contact','mobile','phone','telephone','contact']);
+  const addressCol=findColumn(headers,['recipient address','address','delivery address']);
+  const cityCol=findColumn(headers,['city','recipient city','destination']);
+  const descriptionCol=findColumn(headers,['parcel description','description','item description','product description']);
+  const parcelTypeCol=findColumn(headers,['parcel type','type']);
+  const exchangeCol=findColumn(headers,['exchange','exchange status']);
+  const orderCol=findColumn(headers,['order id','order_id','invoice','invoice id','reference','ref no']);
+  const statusCol=findColumn(headers,['current status','delivery status','status','parcel status']);
+  if(waybillCol<0) throw new Error('Waybill column not found. Your file must have a Waybill column.');
+  let added=0,updated=0,amounts=0,skipped=0;
+  for(let n=1;n<rows.length;n++){
+    const row=rows[n]||[];
+    const waybill=String(row[waybillCol]??'').trim();
+    if(!waybill){skipped++;continue}
+    const amount=amountCol>=0?parseNumber(row[amountCol]):0;
+    const recipient=recipientCol>=0?String(row[recipientCol]??'').trim():'';
+    const mobile=mobileCol>=0?String(row[mobileCol]??'').trim():'';
+    const address=addressCol>=0?String(row[addressCol]??'').trim():'';
+    const city=cityCol>=0?String(row[cityCol]??'').trim():'';
+    const description=descriptionCol>=0?String(row[descriptionCol]??'').trim():'Parcel';
+    const parcelType=parcelTypeCol>=0?String(row[parcelTypeCol]??'').trim():'';
+    const exchange=exchangeCol>=0?String(row[exchangeCol]??'').trim():'0';
+    const orderId=orderCol>=0?String(row[orderCol]??'').trim():'';
+    const importedStatus=statusCol>=0?parseStatus(row[statusCol]):null;
+    let r=db.waybills.find(x=>Number(x.account)===account&&String(x.waybill).trim()===waybill);
+    if(!r){
+      r={id:crypto.randomUUID(),account,waybill,amount:0,ourStatus:importedStatus||'WAITING',recipient,mobile,address,city,orderId,description,parcelType,exchange,weight:'1',lastUpdate:now(),apiStatus:null,currentStatus:null};
+      db.waybills.push(r);added++;
+    }else{
+      updated++;
+      if(recipient)r.recipient=recipient;
+      if(mobile)r.mobile=mobile;
+      if(address)r.address=address;
+      if(city)r.city=city;
+      if(orderId)r.orderId=orderId;
+      if(description)r.description=description;
+      if(parcelType)r.parcelType=parcelType;
+      if(exchange!=='')r.exchange=exchange;
+      if(importedStatus)r.ourStatus=importedStatus;
+    }
+    if(amountCol>=0){r.amount=amount;amounts++}
+  }
+  save();renderAll();
+  return {added,updated,amounts,skipped,rows:rows.length-1,account:db.accounts[account].name};
+}
+async function uploadExcel(){
+  const file=document.getElementById('excelFile').files[0];
+  const account=Number(document.getElementById('excelAccount').value);
+  if(!file)return showMsg('excelMessage','Select an Excel/CSV file first.','error');
+  showMsg('excelMessage','Reading '+file.name+'...','');
+  try{
+    const x=await importExcelFile(file,account);
+    showMsg('excelMessage',`✓ ${x.account}: ${x.rows} rows read • ${x.added} added • ${x.updated} updated • ${x.amounts} amounts imported • ${x.skipped} blank rows skipped.`,'ok');
+    document.getElementById('excelFile').value='';
+  }catch(e){showMsg('excelMessage',e.message,'error')}
+}
+function quickAddWaybill(){
+  const waybill=document.getElementById('quickWaybill').value.trim();
+  const account=Number(document.getElementById('quickAccount').value);
+  const status=document.getElementById('quickStatus').value;
+  if(!waybill)return;
+  let r=db.waybills.find(x=>Number(x.account)===account&&String(x.waybill).trim()===waybill);
+  if(r){
+    r.ourStatus=status;r.lastUpdate=now();
+    save();renderAll();showMsg('quickMessage',`✓ ${waybill} updated in ${db.accounts[account].name}.`,'ok');
+  }else{
+    r={id:crypto.randomUUID(),account,waybill,amount:0,ourStatus:status,recipient:'',mobile:'',address:'',city:'',orderId:'',description:'Parcel',parcelType:'',weight:'1',exchange:'0',lastUpdate:now(),apiStatus:null,currentStatus:null};
+    db.waybills.push(r);save();renderAll();
+    showMsg('quickMessage',`✓ ${waybill} added to ${db.accounts[account].name}. Amount will come from Excel.`,'ok');
+  }
+  document.getElementById('quickWaybill').value='';
+  document.getElementById('quickWaybill').focus();
+}
+function quickReturnReceived(){
+  const waybill=document.getElementById('quickWaybill').value.trim();
+  const account=Number(document.getElementById('quickAccount').value);
+  if(!waybill)return;
+  const r=db.waybills.find(x=>Number(x.account)===account&&String(x.waybill).trim()===waybill);
+  if(!r){
+    showMsg('quickMessage',`❌ ${waybill} not found in ${db.accounts[account].name}. Upload that account's Fardar file first.`,'error');
+    return;
+  }
+  if(r.ourStatus==='RECEIVED'){
+    showMsg('quickMessage',`⚠️ ${waybill} is already RECEIVED.`,'error');
+  }else{
+    r.previousStatus=r.ourStatus;
+    r.ourStatus='RECEIVED';
+    r.receivedAt=now();
+    r.lastUpdate=now();
+    save();renderAll();
+    showMsg('quickMessage',`✓ ${waybill} → RETURN RECEIVED • ${r.recipient||'Customer'} • Rs. ${Number(r.amount||0).toLocaleString()}`,'ok');
+  }
+  document.getElementById('quickWaybill').value='';
+  document.getElementById('quickWaybill').focus();
+}
+
+
+function receiveById(id){
+  const r=db.waybills.find(x=>x.id===id);if(!r)return;
+  if(allStatus(r)!=='RETURNED')return alert('Only RETURNED parcels can be marked RECEIVED.');
+  r.ourStatus='RECEIVED';r.receivedAt=now();r.lastUpdate=r.receivedAt;save();renderAll();
+  showScanResult(`✓ ${r.waybill} marked RECEIVED.`,true);
+}
+function receiveByScan(){
+  const code=document.getElementById('scanInput').value.trim();
+  if(!code)return;
+  const r=db.waybills.find(x=>String(x.waybill).trim()===code);
+  if(!r)return showScanResult(`Waybill ${code} was not found.`,false);
+  const s=allStatus(r);
+  if(s!=='RETURNED')return showScanResult(`${code} is ${s}. Only RETURNED parcels can become RECEIVED.`,false);
+  receiveById(r.id);
+}
+function showScanResult(t,ok){const e=document.getElementById('scanResult');e.className='notice '+(ok?'ok':'error');e.textContent=t}
+function deleteWb(id){if(!confirm('Delete this waybill?'))return;db.waybills=db.waybills.filter(r=>r.id!==id);save();renderAll()}
+function saveAccounts(){
+  document.querySelectorAll('.acc-name').forEach(e=>db.accounts[Number(e.dataset.i)].name=e.value.trim()||`Account ${Number(e.dataset.i)+1}`);
+  document.querySelectorAll('.acc-client').forEach(e=>db.accounts[Number(e.dataset.i)].clientId=e.value.trim());
+  document.querySelectorAll('.acc-key').forEach(e=>db.accounts[Number(e.dataset.i)].apiKey=e.value.trim());
+  save();renderAll();showMsg('accountMessage','Accounts saved locally.','ok');
+}
+async function testAccount(){
+  const i=Number(document.getElementById('dashAccount').value==='ALL'?0:document.getElementById('dashAccount').value);
+  const a=db.accounts[i];if(!a.clientId||!a.apiKey)return showMsg('accountMessage',`${a.name}: add Client ID and API Key first.`,'error');
+  const r=db.waybills.find(x=>Number(x.account)===i);
+  if(!r)return showMsg('accountMessage',`${a.name}: add at least one waybill before testing.`,'error');
+  try{const d=await syncRecord(r);showMsg('accountMessage',`${a.name} API test successful: ${JSON.stringify(d)}`,'ok')}catch(e){showMsg('accountMessage',`${a.name}: ${e.message}`,'error')}
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fardar-waybill-backup.json';a.click();URL.revokeObjectURL(a.href)
+}
+function importData(file){
+  const fr=new FileReader();fr.onload=()=>{try{const x=JSON.parse(fr.result);if(!Array.isArray(x.accounts)||!Array.isArray(x.waybills))throw 0;db=x;save();renderAll();alert('Import successful.')}catch{alert('Invalid backup file.')}};fr.readAsText(file)
+}
+
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(b.dataset.page).classList.add('active')});
+document.getElementById('addWb').onclick=addWaybill;
+document.getElementById('uploadExcel').onclick=uploadExcel;
+document.getElementById('quickAdd').onclick=quickAddWaybill;
+document.getElementById('quickReturn').onclick=quickReturnReceived;
+document.getElementById('quickClear').onclick=()=>{document.getElementById('quickWaybill').value='';document.getElementById('quickWaybill').focus()};
+/* Barcode scanner: most scanners type characters very quickly. We accept the scan
+   automatically without requiring the scanner to send an Enter key. Manual typing
+   still works: press the Add / Update button or Enter. */
+let barcodeBuffer='';
+let barcodeTimer=null;
+let barcodeLastTime=0;
+document.getElementById('quickWaybill').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();quickAddWaybill();barcodeBuffer='';return}
+  if(e.key.length!==1) return;
+  const nowMs=performance.now();
+  if(nowMs-barcodeLastTime>120) barcodeBuffer='';
+  barcodeLastTime=nowMs;
+  barcodeBuffer+=e.key;
+  clearTimeout(barcodeTimer);
+  barcodeTimer=setTimeout(()=>{
+    const value=barcodeBuffer.trim();
+    if(value.length>=5){
+      document.getElementById('quickWaybill').value=value;
+      const acct=Number(document.getElementById('quickAccount').value);
+      const found=db.waybills.find(x=>Number(x.account)===acct&&String(x.waybill).trim()===value);
+      if(found && found.ourStatus==='RETURNED') quickReturnReceived();
+      else quickAddWaybill();
+    }
+    barcodeBuffer='';
+  },120);
+});
+document.getElementById('syncAll').onclick=syncAll;
+document.getElementById('refreshTable').onclick=renderAll;
+document.getElementById('wbSearch').oninput=renderTable;
+document.getElementById('filterAccount').onchange=renderTable;
+document.getElementById('filterStatus').onchange=renderTable;
+document.getElementById('dashAccount').onchange=renderDashboard;
+document.getElementById('dashStatus').onchange=renderDashboard;
+document.getElementById('saveAccounts').onclick=saveAccounts;
+document.getElementById('testSelected').onclick=testAccount;
+document.getElementById('scanReceive').onclick=receiveByScan;
+document.getElementById('clearScan').onclick=()=>{document.getElementById('scanInput').value='';document.getElementById('scanResult').textContent='';document.getElementById('scanInput').focus()};
+document.getElementById('scanInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();receiveByScan()}});
+document.getElementById('exportBtn').onclick=exportData;
+document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange=e=>{if(e.target.files[0])importData(e.target.files[0])};
+document.getElementById('clearData').onclick=()=>{if(confirm('Delete ALL waybill records?')){db.waybills=[];save();renderAll()}};
+
+renderAll();
+setTimeout(()=>document.getElementById('quickWaybill')?.focus(),250);
+syncReverseStatuses();
+setInterval(syncReverseStatuses, 30000);
+</script>
+</body>
+</html>
