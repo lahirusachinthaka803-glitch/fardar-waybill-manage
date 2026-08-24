@@ -164,7 +164,7 @@ window.addEventListener('error', function(e){
   <div class="card" style="margin-top:14px"><h3>API Notes</h3>
     <ul class="muted">
       <li>Existing Waybill endpoint from your Fardar documentation is used for the POST sync.</li>
-      <li>Codes such as <small class="code">200</small>, <small class="code">202</small> and <small class="code">215</small> are treated as Fardar API/result codes, not parcel-delivery statuses. The screenshot response <small class="code">{"status":"202","waybillID":"..."}</small> is therefore a successful/accepted API response, while the parcel remains on its existing local status until Fardar returns <small class="code">current_status</small>.</li>
+      <li>Fardar Existing Waybill API codes <small class="code">200–214</small> are treated as API/result codes, not parcel-delivery statuses. <small class="code">200</small> means the parcel was successfully inserted; <small class="code">201–214</small> are validation/API error or status messages. The parcel delivery status changes only when Fardar returns <small class="code">current_status</small>.</li>
       <li>If a response contains <small class="code">current_status</small>, that value is mapped to our WAITING/DISPATCHED/DELIVERED/RETURNED categories.</li>
       <li>The Fardar Reverse API documentation you provided returns <small class="code">waybill_id</small>, <small class="code">current_status</small> and <small class="code">last_update_time</small>. This page reads those callbacks from <small class="code">./reverse_api.php</small> every 30 seconds.</li>
       <li><small class="code">amount</small> is no longer entered manually. It is imported from the account's Excel file and included in account/all-account summaries.</li>
@@ -199,8 +199,24 @@ function now(){return new Date().toISOString()}
 function accountName(i){return db.accounts[i]?.name||`Account ${Number(i)+1}`}
 function apiCodeMeaning(code){
   const c=String(code??'').trim();
-  if(['200','201','202','215'].includes(c)) return 'API SUCCESS / ACCEPTED';
-  return c ? 'API RESPONSE' : '';
+  const meanings={
+    '200':'Successfully insert the parcel',
+    '201':'Incorrect waybill type. Only allow CRE or CCP',
+    '202':'The waybill is used',
+    '203':'The waybill is not yet assigned',
+    '204':'Inactive Client',
+    '205':'Invalid order id',
+    '206':'Invalid weight',
+    '207':'Empty or invalid parcel description',
+    '208':'Empty or invalid name',
+    '209':'Invalid contact number 1',
+    '210':'Invalid contact number 2',
+    '211':'Empty or invalid address',
+    '212':'Empty or invalid amount',
+    '213':'Invalid city',
+    '214':'Parcel insert unsuccessfully'
+  };
+  return meanings[c] || (c ? 'API RESPONSE' : '');
 }
 async function syncReverseStatuses(){
   try{
@@ -344,7 +360,10 @@ async function syncRecord(r){
 async function syncOne(id){
   const r=db.waybills.find(x=>x.id===id);if(!r)return;
   showMsg('apiMessage','Syncing '+r.waybill+'...','');
-  try{const d=await syncRecord(r);showMsg('apiMessage',`Fardar response: ${JSON.stringify(d)} — ${apiCodeMeaning(d.status??d.code) || 'response received'}. Delivery status changes only when current_status is returned.`,'ok')}catch(e){showMsg('apiMessage',e.message,'error')}
+  try{const d=await syncRecord(r);const code=String(d.status??d.code??'').trim();
+    const meaning=apiCodeMeaning(code) || 'response received';
+    const type=code==='200'?'ok':(code?'error':'');
+    showMsg('apiMessage',`Fardar response ${code||'—'}: ${meaning}. Delivery status changes only when current_status is returned.`,type)}catch(e){showMsg('apiMessage',e.message,'error')}
 }
 async function syncAll(){
   const rows=getFiltered();if(!rows.length)return showMsg('apiMessage','No visible waybills.','');
