@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+oexport default async function handler(req, res) {
   if (req.method === 'POST') {
     // Fardar sends current_status, waybill_id, and last_update_time
     const { waybill_id, current_status, last_update_time } = req.body || {};
