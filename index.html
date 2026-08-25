@@ -29,14 +29,13 @@ small.code{font-family:monospace;background:#f1f5f9;padding:2px 5px;border-radiu
   .table-wrap{overflow-x:auto}
   #wbTableWrap table{min-width:0;width:100%;table-layout:fixed}
   #wbTableWrap th,#wbTableWrap td{white-space:normal;overflow:hidden;text-overflow:ellipsis}
-  #wbTableWrap th:nth-child(1),#wbTableWrap td:nth-child(1),
-  #wbTableWrap th:nth-child(4),#wbTableWrap td:nth-child(4),
-  #wbTableWrap th:nth-child(6),#wbTableWrap td:nth-child(6),
-  #wbTableWrap th:nth-child(7),#wbTableWrap td:nth-child(7){display:none}
+  #wbTableWrap th:nth-child(1),#wbTableWrap td:nth-child(1){display:none}
   #wbTableWrap th:nth-child(2),#wbTableWrap td:nth-child(2){width:27%}
   #wbTableWrap th:nth-child(3),#wbTableWrap td:nth-child(3){width:18%}
+  #wbTableWrap th:nth-child(4),#wbTableWrap td:nth-child(4){width:30%}
   #wbTableWrap th:nth-child(5),#wbTableWrap td:nth-child(5){width:25%}
-  #wbTableWrap th:nth-child(8),#wbTableWrap td:nth-child(8){width:30%}
+  #wbTableWrap th:nth-child(6),#wbTableWrap td:nth-child(6){display:none}
+  #wbTableWrap th:nth-child(7),#wbTableWrap td:nth-child(7){width:30%}
   #wbTableWrap td button{padding:7px 8px;margin:2px;font-size:12px}
   #accountSummary{min-width:760px}
 }
@@ -126,7 +125,7 @@ window.addEventListener('error', function(e){
       <div><label>Status</label><select id="filterStatus"><option value="ALL">All</option><option>WAITING</option><option>DISPATCHED</option><option>DELIVERED</option><option>RETURNED</option><option>RECEIVED</option></select></div>
       <button id="refreshTable">Refresh</button>
     </div>
-    <div class="table-wrap" id="wbTableWrap" style="margin-top:12px"><table><thead><tr><th>Account</th><th>Waybill</th><th>Amount</th><th>Fardar/API Status</th><th>Our Status</th><th>Last Update</th><th>Recipient</th><th>Actions</th></tr></thead><tbody id="wbTable"></tbody></table></div>
+    <div class="table-wrap" id="wbTableWrap" style="margin-top:12px"><table><thead><tr><th>Account</th><th>Waybill</th><th>Amount</th><th>Fardar Status / Details</th><th>Last Update</th><th>Recipient</th><th>Actions</th></tr></thead><tbody id="wbTable"></tbody></table></div>
   </div>
 </section>
 
@@ -290,12 +289,13 @@ function renderTable(){
   document.getElementById('wbTable').innerHTML=rows.length?rows.map(r=>{
     const s=allStatus(r);
     const canReceive=s==='RETURNED';
+    const detail = r.currentStatus || r.apiResult || r.apiStatus || '—';
     return `<tr>
       <td>${esc(accountName(r.account))}</td><td><b>${esc(r.waybill)}</b></td><td>${money(r.amount)}</td>
-      <td>${esc(r.apiStatus??'—')}</td><td><span class="badge ${s}">${s}</span></td>
+      <td><div><span class="badge ${s}">${esc(detail)}</span></div><small class="muted">Our status: ${esc(s)}</small></td>
       <td>${esc(r.lastUpdate?new Date(r.lastUpdate).toLocaleString():'—')}</td><td>${esc(r.recipient||'—')}</td>
       <td><button onclick="syncOne('${esc(r.id)}')">Sync</button> ${canReceive?`<button class="purple" onclick="receiveById('${esc(r.id)}')">RECEIVED</button>`:''} <button class="danger" onclick="deleteWb('${esc(r.id)}')">Delete</button></td>
-    </tr>`}).join(''):'<tr><td colspan="8" class="muted">No waybills found.</td></tr>';
+    </tr>`}).join(''):'<tr><td colspan="7" class="muted">No waybills found.</td></tr>';
 }
 function statsFor(list){
   const c={WAITING:0,DISPATCHED:0,DELIVERED:0,RETURNED:0,RECEIVED:0};
